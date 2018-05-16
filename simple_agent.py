@@ -62,7 +62,18 @@ def selectCommandCenter(self,obs):
     target = [int(unit_x.mean()),int(unit_y.mean())]
     self.scv_selected = False
     self.barracks_selected = False
+    self.army_selected = False
     self.commandCenter_selected = True
+    return actions.FunctionCall(_SELECT_POINT,[_NOT_QUEUED,target])
+
+def selectBarracks(self,obs):
+    unit_type = obs.observation["screen"][_UNIT_TYPE]
+    unit_y, unit_x = (unit_type == _TERRAN_BARRACKS).nonzero()
+    target = [int(unit_x.mean()),int(unit_y.mean())]
+    self.scv_selected = False
+    self.barracks_selected = True
+    self.army_selected = False
+    self.commandCenter_selected = False
     return actions.FunctionCall(_SELECT_POINT,[_NOT_QUEUED,target])
     
 
@@ -119,6 +130,7 @@ class SimpleAgent(base_agent.BaseAgent):
                     self.commandCenter_selected = False
                     self.barracks_selected = True
                     self.scv_selected = False
+                    self.army_selected = False
                     return actions.FunctionCall(_SELECT_POINT,[_NOT_QUEUED, target])
             else:
                 self.barracks_rallied = True
@@ -127,15 +139,14 @@ class SimpleAgent(base_agent.BaseAgent):
 
                 return actions.FunctionCall(_RALLY_UNITS_MINIMAP, [_NOT_QUEUED, [29, 46]])
 
-
+        #Trains new marines if we have supply left
         elif obs.observation["player"][_SUPPLY_USED] < obs.observation["player"][_SUPPLY_MAX]:
-            if not self.commandCenter_selected:
-                print("About to select command center")
-                return selectCommandCenter(self,obs)
-            elif _TRAIN_SCV in obs.observation["available_actions"]:
-                print("About to build scv")
-                return actions.FunctionCall(_TRAIN_SCV, [_QUEUED])
-
+            if not self.barracks_selected:
+                return selectBarracks(self,obs)
+            elif _TRAIN_MARINE in obs.observation["available_actions"]:
+                return actions.FunctionCall(_TRAIN_MARINE, [_QUEUED])
+            
+        #selects army and attacks
         elif not self.army_rallied:
             if not self.army_selected:
                 if _SELECT_ARMY in obs.observation["available_actions"]:
