@@ -14,6 +14,10 @@ _TRAIN_SCV = actions.FUNCTIONS.Train_SCV_quick.id
 _RALLY_UNITS_MINIMAP = actions.FUNCTIONS.Rally_Units_minimap.id
 _SELECT_ARMY = actions.FUNCTIONS.select_army.id
 _ATTACK_MINIMAP = actions.FUNCTIONS.Attack_minimap.id
+_MOVE_SCREEN = actions.FUNCTIONS.Move_screen.id
+_MOVE_CAMERA = actions.FUNCTIONS.move_camera.id
+_MOVE_MINIMAP = actions.FUNCTIONS.Move_minimap.id
+_CONTROL_GROUP = actions.FUNCTIONS.select_control_group.id
 
 # Features
 _PLAYER_RELATIVE = features.SCREEN_FEATURES.player_relative.index
@@ -24,6 +28,7 @@ _TERRAN_BARRACKS = 21
 _TERRAN_COMMANDCENTER = 18
 _TERRAN_SUPPLYDEPOT = 19
 _TERRAN_SCV = 45
+_TERRAN_MARINE = 48
 
 # Parameters
 _PLAYER_SELF = 1
@@ -94,7 +99,8 @@ class SimpleAgent(base_agent.BaseAgent):
     scv_selected = False
     commandCenter_selected = False
 
-        
+    x_coord = 0
+    y_coord = 0
 
     def step(self, obs):
         super(SimpleAgent, self).step(obs)
@@ -145,7 +151,8 @@ class SimpleAgent(base_agent.BaseAgent):
                 return selectBarracks(self,obs)
             elif _TRAIN_MARINE in obs.observation["available_actions"]:
                 return actions.FunctionCall(_TRAIN_MARINE, [_QUEUED])
-            
+
+
         #selects army and attacks
         elif not self.army_rallied:
             if not self.army_selected:
@@ -166,7 +173,15 @@ class SimpleAgent(base_agent.BaseAgent):
                 return actions.FunctionCall(_ATTACK_MINIMAP, [_NOT_QUEUED, [21, 24]])
 
 
+        elif _MOVE_MINIMAP in obs.observation["available_actions"]:  # and TERRAN_MARINE in obs.observation["screen"][_UNIT_TYPE]:
+            self.x_coord = random.randint(0, 63)
+            self.y_coord = random.randint(0, 63)
+            target = [self.x_coord, self.y_coord]
+            return actions.FunctionCall(_MOVE_MINIMAP, [_NOT_QUEUED, target])
+
         return actions.FunctionCall(actions.FUNCTIONS.no_op.id, [])
+
+
     def transformLocation(self, x, x_distance, y, y_distance):
         if not self.base_top_left:
             return[x-x_distance, y-y_distance]
