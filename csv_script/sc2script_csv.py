@@ -16,7 +16,6 @@ def extract(in_path, out_path):
     created = []
     deaths = []
 
-
     for event in replay.events:
         # Unit created
         if type(event) is sc2reader.events.tracker.UnitBornEvent:
@@ -32,7 +31,20 @@ def extract(in_path, out_path):
 
                 created.append(created_data)
 
-    print(created)
+        if type(event) is sc2reader.events.tracker.UnitDiedEvent:
+            death_data = {
+                'killing_unit_id': event.killing_unit_id,
+                'x_coordinate:': event.location[0],
+                'y_coordinate:': event.location[1],
+                'game_second': event.second,
+                #'unit_type:': event.unit_type_name,                    'game_second': event.second,
+                #'player': event.unit_controller.toon_id,
+                'unit_id': event.unit_id
+            }
+
+            deaths.append(death_data)
+
+    print(deaths)
 
 
 
