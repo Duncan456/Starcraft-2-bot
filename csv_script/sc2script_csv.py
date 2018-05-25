@@ -1,3 +1,9 @@
+# To get the parsed replay data, run the command below
+# python filename.py replay.SC2replay > realOutput.csv_out
+#
+# python sc2script_csv.py *.SC2Replay > 1.csv
+# realOutput.csv is the data you need!
+
 import argparse
 import csv
 import sys
@@ -54,10 +60,10 @@ def getData(created, deaths):
 def sc2_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('replay_in', metavar='PATH', type=str, help="replay file")
-    parser.add_argument('out', metavar='PATH', type=str, help="csv file")
+    #parser.add_argument('out', metavar='PATH', type=str, help="csv file")
     return parser.parse_args()
 
-def extract(in_path, out_path):
+def extract(in_path):
     replay = sc2reader.load_replay(in_path, load_level = 4)
     created = []
     deaths = []
@@ -96,7 +102,7 @@ def main():
     args = sc2_parser()
     if(".sc2replay" in args.replay_in.lower()):
 
-        extract(args.replay_in, args.out)
+        extract(args.replay_in)
 
 if __name__ == '__main__':
     main()
