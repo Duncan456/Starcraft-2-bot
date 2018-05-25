@@ -21,9 +21,12 @@ _PLAYER_RELATIVE = features.SCREEN_FEATURES.player_relative.index
 _UNIT_TYPE = features.SCREEN_FEATURES.unit_type.index
 _PLAYER_ID = features.SCREEN_FEATURES.player_id.index
 _PLAYER_RELATIVE_MINI = features.MINIMAP_FEATURES.player_relative.index
+_MINI_VISIBILITY = features.MINIMAP_FEATURES.visibility_map.index
 
 _PLAYER_SELF = 1
 _PLAYER_ENEMY = 4
+
+_VISIBLE = 1
 
 _TERRAN_COMMANDCENTER = 18
 _TERRAN_SCV = 45
@@ -41,30 +44,28 @@ ACTION_BUILD_BARRACKS = 'buildbarracks'
 ACTION_SELECT_BARRACKS = 'selectbarracks'
 ACTION_BUILD_MARINE = 'buildmarine'
 ACTION_SELECT_ARMY = 'selectarmy'
-ACTION_ATTACK = 'attack'
+#ACTION_ATTACK = 'attack'
 ACTION_SCOUT = 'scout'
 
 smart_actions = [
     ACTION_DO_NOTHING,
     ACTION_SELECT_SCV,
     ACTION_BUILD_SUPPLY_DEPOT,
-    ACTION_BUILD_BARRACKS,
+   # ACTION_BUILD_BARRACKS,
     ACTION_SELECT_BARRACKS,
     ACTION_BUILD_MARINE,
-    ACTION_SELECT_ARMY,
-   # ACTION_ATTACK,
+    #ACTION_SELECT_ARMY,
     ACTION_SCOUT,
 ]
-# add in a scout for every single location on the map
+# add in a scout for every single location on the map split into 4 quadrants
 for mm_x in range(0, 64):
     for mm_y in range(0, 64):
         if (mm_x + 1) % 16 == 0 and (mm_y + 1) % 16 == 0:
-            smart_actions.append(ACTION_ATTACK + '__' + str(mm_x - 8) + '__' + str(mm_y - 8))
+            smart_actions.append(ACTION_SCOUT + '__' + str(mm_x - 8) + '__' + str(mm_y - 8))
 
-KILL_UNIT_REWARD = 0.2
-KILL_BUILDING_REWARD = 0.5
 
 SEE_ENEMY_REWARD = 0.5
+NOT_DIE_REWARD = 0.5
 
 
 # Stolen from https://github.com/MorvanZhou/Reinforcement-learning-with-tensorflow
@@ -112,34 +113,49 @@ class QLearningTable:
 
 
 class SmartAgent(base_agent.BaseAgent):
-    def transformLocation(self, x, x_distance, y, y_distance):
+    def transformDistance(self, x, x_distance, y, y_distance):
         if not self.base_top_left:
             return [x - x_distance, y - y_distance]
 
         return [x + x_distance, y + y_distance]
 
+    def transformLocation(self, x, y):
+        if not self.base_top_left:
+            return [63 - x, 63 - y]
+
+        return [x, y]
+
     def __init__(self):
         super(SmartAgent,self).__init__()
         self.qlearn = QLearningTable(actions=list(range(len(smart_actions))))
-        self.previous_see_unit_score = 0
-        self.previous_see_building_score = 0
         self.previous_action = None
         self.previous_state = None
         self.previousEnemyxy = []
+        self.previousSupply = 0
+        self.selectSCV = False
+        self.barracksBuilt = False
+        self.selectArmy = False
+        self.count = 0
+        self.previousVisible = [[0],[0]]
 
     def step(self, obs):
         super(SmartAgent, self).step(obs)
 
-        player_y, player_x = (obs.observation['minimap'][_PLAYER_RELATIVE] == _PLAYER_SELF).nonzero()
-        self.base_top_left = 1 if player_y.any() and player_y.mean() <= 31 else 0
+        if obs.first():
+            player_y, player_x = (obs.observation['minimap'][_PLAYER_RELATIVE] == _PLAYER_SELF).nonzero()
+            self.SelectSCV = False
+            self.barracksBuilt = False
+            self.selectArmy = False
+            self.base_top_left = 1 if player_y.any() and player_y.mean() <= 31 else 0
+            self.previousVisible = (obs.observation['minimap'][_MINI_VISIBILITY] == _VISIBLE).nonzero()
 
         #############SETTING UP THE STATE#############
         unit_type = obs.observation['screen'][_UNIT_TYPE]
         enemy_y, enemy_x = (obs.observation['minimap'][_PLAYER_RELATIVE_MINI] == _PLAYER_ENEMY).nonzero()
-        #Need to make this not print when enemyXY is nan
+        visible = (obs.observation['minimap'][_MINI_VISIBILITY] == _VISIBLE).nonzero()
+
+
         enemyXY = [enemy_x.mean(), enemy_y.mean()]
-        if enemyXY is not self.previousEnemyxy and enemyXY:
-            print (enemyXY)
 
         depot_y, depot_x = (unit_type == _TERRAN_SUPPLY_DEPOT).nonzero()
         supply_depot_count = 1 if depot_y.any() else 0
@@ -148,43 +164,45 @@ class SmartAgent(base_agent.BaseAgent):
         barracks_count = 1 if barracks_y.any() else 0
 
         supply_limit = obs.observation['player'][4]
-        army_supply = obs.observation['player'][5]
-
-        killed_unit_score = obs.observation['score_cumulative'][5]
-        killed_building_score = obs.observation['score_cumulative'][6]
-
-
-
+        army_supply = obs.observation['player'][8]
 
         current_state = [
             supply_depot_count,
             barracks_count,
             supply_limit,
             army_supply,
-            enemyXY,
-
+            #enemyXY,
+            visible,
         ]
+        ################################################
+
             #Dont learn from the first step#
         if self.previous_action is not None:
             reward = 0
             #Adjust reward based on current score
-            if enemyXY is not self.previousEnemyxy and enemyXY:
-                reward += SEE_ENEMY_REWARD
+           # if enemyXY is not self.previousEnemyxy and enemy_x.any():
+            if (len(visible[0]) + len(visible[1])) - (len(self.previousVisible[0]) + len(self.previousVisible[1])) >= 17:
+                if army_supply >= 0:
+                    print((len(visible[0]) + len(visible[1])) - (len(self.previousVisible[0]) + len(self.previousVisible[1])))
+                    reward += SEE_ENEMY_REWARD
+                   # reward += NOT_DIE_REWARD
             self.qlearn.learn(str(self.previous_state),self.previous_action,reward,str(current_state))
-        ################################################
+
 
                 #Choose an action#
         rl_action = self.qlearn.choose_action(str(current_state))
-        smart_action = smart_actions[rl_action]
+        if self.count % 3 is 0:
+            smart_action = smart_actions[rl_action]
+        else:
+            smart_action = ACTION_DO_NOTHING
 
-
+        self.count = self.count + 1
                 #Set up state for next step#
-        self.previous_killed_unit_score = killed_unit_score
-        self.previous_killed_building_score = killed_building_score
         self.previous_state = current_state
         self.previous_action = rl_action
         self.previousEnemyxy = enemyXY
-
+        self.previousSupply = army_supply
+        self.previousVisible = visible
         # get the x and y coords if its a scout action
         x = 0
         y = 0
@@ -195,12 +213,13 @@ class SmartAgent(base_agent.BaseAgent):
         if smart_action == ACTION_DO_NOTHING:
             return actions.FunctionCall(_NO_OP,[])
 
-        elif smart_action == ACTION_SELECT_SCV:
+        elif smart_action == ACTION_SELECT_SCV and not self.barracksBuilt:
             unit_type = obs.observation['screen'][_UNIT_TYPE] #Put all units on screen into unit_type
             unit_y,unit_x = (unit_type == _TERRAN_SCV).nonzero() #select all the x and y coords of terran scv
             if unit_y.any():
                 i = random.randint(0,len(unit_y)-1)
                 target = [unit_x[i],unit_y[i]]
+                self.selectSCV = True
                 return actions.FunctionCall(_SELECT_POINT,[_NOT_QUEUED,target])
 
         elif smart_action == ACTION_BUILD_SUPPLY_DEPOT:
@@ -209,19 +228,10 @@ class SmartAgent(base_agent.BaseAgent):
                 unit_y, unit_x = (unit_type == _TERRAN_COMMANDCENTER).nonzero()
 
                 if unit_y.any():
-                    target = self.transformLocation(int(unit_x.mean()), 0, int(unit_y.mean()), 20)
+                    target = self.transformDistance(int(unit_x.mean()), 0, int(unit_y.mean()), 20)
 
                     return actions.FunctionCall(_BUILD_SUPPLY_DEPOT, [_NOT_QUEUED, target])
 
-        elif smart_action == ACTION_BUILD_BARRACKS:
-            if _BUILD_BARRACKS in obs.observation['available_actions']:
-                unit_type = obs.observation['screen'][_UNIT_TYPE]
-                unit_y, unit_x = (unit_type == _TERRAN_COMMANDCENTER).nonzero()
-
-                if unit_y.any():
-                    target = self.transformLocation(int(unit_x.mean()), 20, int(unit_y.mean()), 0)
-
-                    return actions.FunctionCall(_BUILD_BARRACKS, [_NOT_QUEUED, target])
 
         elif smart_action == ACTION_SELECT_BARRACKS:
             unit_type = obs.observation['screen'][_UNIT_TYPE]
@@ -229,26 +239,29 @@ class SmartAgent(base_agent.BaseAgent):
 
             if unit_y.any():
                 target = [int(unit_x.mean()), int(unit_y.mean())]
-
+                self.selectArmy = False
+                self.selectSCV = False
                 return actions.FunctionCall(_SELECT_POINT, [_NOT_QUEUED, target])
 
         elif smart_action == ACTION_BUILD_MARINE:
             if _TRAIN_MARINE in obs.observation['available_actions']:
                 return actions.FunctionCall(_TRAIN_MARINE, [_QUEUED])
+            elif _BUILD_BARRACKS in obs.observation['available_actions'] and not self.barracksBuilt:
+                unit_type = obs.observation['screen'][_UNIT_TYPE]
+                unit_y, unit_x = (unit_type == _TERRAN_COMMANDCENTER).nonzero()
+                if unit_y.any():
+                    target = self.transformDistance(int(unit_x.mean()), 20, int(unit_y.mean()), 0)
+                    self.barracksBuilt = True
+                    return actions.FunctionCall(_BUILD_BARRACKS, [_NOT_QUEUED, target])
 
-        elif smart_action == ACTION_SELECT_ARMY:
-            if _SELECT_ARMY in obs.observation['available_actions']:
+
+        elif smart_action == ACTION_SCOUT and not self.selectSCV:
+            if _SELECT_ARMY in obs.observation['available_actions'] and not self.selectArmy:
+                self.selectSCV = False
+                self.selectArmy = True
                 return actions.FunctionCall(_SELECT_ARMY, [_NOT_QUEUED])
-
-        elif smart_action == ACTION_ATTACK:
-            if _ATTACK_MINIMAP in obs.observation["available_actions"]:
-                if self.base_top_left:
-                    return actions.FunctionCall(_ATTACK_MINIMAP, [_NOT_QUEUED, [39, 45]])
-
-                return actions.FunctionCall(_ATTACK_MINIMAP, [_NOT_QUEUED, [21, 24]])
-        elif smart_action == ACTION_SCOUT:
-            if _MOVE_MINIMAP in obs.observation["available_actions"]:
-                target = [int(x),int(y)]
+            elif _MOVE_MINIMAP in obs.observation["available_actions"]:
+                target = self.transformLocation(int(x),int(y))
                 return actions.FunctionCall(_MOVE_MINIMAP,[_NOT_QUEUED,target])
 
 
