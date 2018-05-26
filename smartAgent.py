@@ -1,5 +1,6 @@
 import random
 import math
+import os.path
 
 import numpy as np
 import pandas as pd
@@ -62,6 +63,8 @@ NOT_DIE_REWARD = 0.5
 
 REWARDGL = 0
 
+DATA_FILE = 'sparse_agent_data'
+
 # Stolen from https://github.com/MorvanZhou/Reinforcement-learning-with-tensorflow
 class QLearningTable:
     def __init__(self, actions, learning_rate=0.01, reward_decay=0.9, e_greedy=0.9):
@@ -95,7 +98,10 @@ class QLearningTable:
         self.check_state_exist(s)
 
         q_predict = self.q_table.ix[s, a]
-        q_target = r + self.gamma * self.q_table.ix[s_, :].max()
+        if s_ != 'terminal':
+            q_target = r + self.gamma * self.q_table.ix[s_, :].max()
+        else:
+            q_target = r  # next state is terminal
 
         # update
         self.q_table.ix[s, a] += self.lr * (q_target - q_predict)
@@ -142,6 +148,9 @@ class SmartAgent(base_agent.BaseAgent):
         self.CommandCenterX = None
         self.CommandCenterY = None
 
+        if os.path.isfile(DATA_FILE + '.gz'):
+            self.qlearn.q_table = pd.read_pickle(DATA_FILE + '.gz', compression='gzip')
+
     def step(self, obs):
         super(SmartAgent, self).step(obs)
 
@@ -150,9 +159,10 @@ class SmartAgent(base_agent.BaseAgent):
             print("REWARD VALUE")
             print(REWARDGL)
             self.qlearn.learn(str(self.previous_state), self.previous_action, REWARDGL, 'terminal')
+            self.qlearn.q_table.to_pickle(DATA_FILE + '.gz', 'gzip')
             self.previous_action = None
             self.previous_state = None
-            self.move_number = 0
+            self.stepNum = 0
             REWARDGL = 0
             return actions.FunctionCall(_NO_OP, [])
 
@@ -220,7 +230,7 @@ class SmartAgent(base_agent.BaseAgent):
                     #reward += SEE_ENEMY_REWARD
                     REWARDGL+= SEE_ENEMY_REWARD
                     #print(reward)
-                #self.qlearn.learn(str(self.previous_state),self.previous_action,reward,str(current_state))
+                self.qlearn.learn(str(self.previous_state),self.previous_action,0,str(current_state))
 
 
                     #Choose an action#
