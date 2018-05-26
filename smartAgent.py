@@ -63,7 +63,7 @@ NOT_DIE_REWARD = 0.5
 
 REWARDGL = 0
 
-DATA_FILE = 'sparse_agent_data'
+DATA_FILE = 'Scout_data'
 
 # Stolen from https://github.com/MorvanZhou/Reinforcement-learning-with-tensorflow
 class QLearningTable:
