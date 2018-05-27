@@ -1,5 +1,5 @@
 # To get the parsed replay data, run the command below
-# python filename.py replay.SC2replay > realOutput.csv_out
+# python filename.py replay.SC2replay output.csv > realOutput.csv_out
 #
 # python sc2script_csv.py *.SC2Replay > 1.csv
 # realOutput.csv is the data you need!
@@ -10,25 +10,31 @@ import sys
 from os.path import isfile, join
 import sc2reader
 from sc2reader.engine.plugins import SelectionTracker, APMTracker
-def csv_out(results):
-    for i in range(0,len(results)):
+def csv_out(results, out_path):
+    # for i in range(0,len(results)):
+    #
+    #     print('unit_type: ' + results[i]['unit_type:'] + ", "
+    #           'unit_id: ' + results[i]['unit_id:'] + ", "
+    #           'purchase_game_second: ' + results[i]['purchase_game_second:'] + ", "
+    #           'purchase_x_coordinate: ' + results[i]['purchase_x_coordinate:'] + ", "
+    #           'purchase_y_coordinate: ' + results[i]['purchase_y_coordinate:'] + ", "
+    #           'death_game_second: ' + results[i]['death_game_second:'] + ", "
+    #           'death_x_coordinate: ' + results[i]['death_x_coordinate:'] + ", "
+    #           'death_y_coordinate: ' + results[i]['death_y_coordinate:'] + ", "
+    #           'killing_unit_id: ' + results[i]['killing_unit_id:'] + ", "
+    #           'life_span: ' + results[i]['life_span:']
+    #     )
+    keys = results[0].keys()
+    with open (out_path, 'wb') as myfile:
+        wr = csv.DictWriter(myfile, keys)
+        wr.writeheader()
+        wr.writerows(results)
+        #wr = csv.writer(myfile, dialect='excel')
+        #wr.writerow(results)
 
-        print('unit_type: ' + results[i]['unit_type:'] + ", "
-              'unit_id: ' + results[i]['unit_id:'] + ", "
-              'purchase_game_second: ' + results[i]['purchase_game_second:'] + ", "
-              'purchase_x_coordinate: ' + results[i]['purchase_x_coordinate:'] + ", "
-              'purchase_y_coordinate: ' + results[i]['purchase_y_coordinate:'] + ", "
-              'death_game_second: ' + results[i]['death_game_second:'] + ", "
-              'death_x_coordinate: ' + results[i]['death_x_coordinate:'] + ", "
-              'death_y_coordinate: ' + results[i]['death_y_coordinate:'] + ", "
-              'killing_unit_id: ' + results[i]['killing_unit_id:'] + ", "
-              'life_span: ' + results[i]['life_span:']
-        )
 
 
-
-
-def getData(created, deaths):
+def getData(created, deaths, out_path):
     results = []
     for i in range(0,len(created)):
         for j in range(0, len(deaths)):
@@ -54,16 +60,17 @@ def getData(created, deaths):
                 # print(game_results)
                 results.append(game_results)
     #print(results)
-    csv_out(results)
+    if '.csv' in out_path:
+        csv_out(results, out_path)
 
 
 def sc2_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('replay_in', metavar='PATH', type=str, help="replay file")
-    #parser.add_argument('out', metavar='PATH', type=str, help="csv file")
+    parser.add_argument('out', metavar='PATH', type=str, help="csv file")
     return parser.parse_args()
 
-def extract(in_path):
+def extract(in_path, out_path):
     replay = sc2reader.load_replay(in_path, load_level = 4)
     created = []
     deaths = []
@@ -95,14 +102,14 @@ def extract(in_path):
             }
 
             deaths.append(death_data)
-    getData(created, deaths)
+    getData(created, deaths, out_path)
 
 
 def main():
     args = sc2_parser()
     if(".sc2replay" in args.replay_in.lower()):
 
-        extract(args.replay_in)
+        extract(args.replay_in, args.out)
 
 if __name__ == '__main__':
     main()
