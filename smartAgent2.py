@@ -119,8 +119,7 @@ class QLearningTable:
     def check_state_exist(self, state):
         if state not in self.q_table.index:
             # append new state to q table
-            self.q_table = self.q_table.append(
-                pd.Series([0] * len(self.actions), index=self.q_table.columns, name=state))
+            self.q_table = self.q_table.append(pd.Series([0] *(len(self.actions)-1), index=self.q_table.columns, name=state))
 
 
 
@@ -210,7 +209,7 @@ class SmartAgent(base_agent.BaseAgent):
         if self.stepNum == 0: #if this is the first step
             self.stepNum += 1
 
-            current_state = np.zeros(23) # Generate array of 23
+            current_state = np.zeros(22) # Generate array of 22
             current_state[0] = supply_depot_count
             current_state[1] = barracks_count
             current_state[2] = turrets_count
@@ -233,6 +232,7 @@ class SmartAgent(base_agent.BaseAgent):
                 current_state[i+6] = enemy_squares[i] #write in enemy squares location into the state
 
             ################################################
+            ##print(current_state,"\n")
 
 
                 #Dont learn from the first step#
@@ -294,7 +294,7 @@ class SmartAgent(base_agent.BaseAgent):
                         if supply_depot_count == 0:
                             target = self.transformDistance(round(self.CommandCenterX.mean()), -35, round(self.CommandCenterY.mean()), 0)
                         elif supply_depot_count == 1:
-                            target = self.transformDistance(round(self.CommandCenterX.mean()), -25, round(self.CommandCenterY.mean()), -25)
+                            target = self.transformDistance(round(self.CommandCenterX.mean()), -5, round(self.CommandCenterY.mean()), -10)
 
                         return actions.FunctionCall(_BUILD_SUPPLY_DEPOT, [_NOT_QUEUED, target])
 
@@ -311,7 +311,7 @@ class SmartAgent(base_agent.BaseAgent):
                 if  _BUILD_ENGBAY in obs.observation['available_actions']:
                     if self.CommandCenterY.any():
                         if engbay_count == 0:
-                            target = self.transformDistance(round(self.CommandCenterX.mean()), 35, round(self.CommandCenterY.mean()),0)
+                            target = self.transformDistance(round(self.CommandCenterX.mean()), 20, round(self.CommandCenterY.mean()),0)
                         return actions.FunctionCall(_BUILD_ENGBAY, [_NOT_QUEUED, target])
 
 
