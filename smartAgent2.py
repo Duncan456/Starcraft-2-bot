@@ -17,6 +17,7 @@ _TRAIN_MARINE = actions.FUNCTIONS.Train_Marine_quick.id
 _SELECT_ARMY = actions.FUNCTIONS.select_army.id
 _ATTACK_MINIMAP = actions.FUNCTIONS.Attack_minimap.id
 _MOVE_MINIMAP = actions.FUNCTIONS.Move_minimap.id
+_BUILD_ENGBAY = actions.FUNCTIONS.Build_EngineeringBay_screen.id
 _BUILD_TURRET = actions.FUNCTIONS.Build_MissileTurret_screen.id
 
 _PLAYER_RELATIVE = features.SCREEN_FEATURES.player_relative.index
@@ -34,7 +35,9 @@ _TERRAN_COMMANDCENTER = 18
 _TERRAN_SCV = 45
 _TERRAN_SUPPLY_DEPOT = 19
 _TERRAN_BARRACKS = 21
-_TERRAN_TURRET = 31
+_TERRAN_TURRET = 23
+_TERRAN_ENGBAY = 22
+
 
 _NOT_QUEUED = [0]
 _QUEUED = [1]
@@ -46,6 +49,7 @@ ACTION_BUILD_SUPPLY_DEPOT = 'buildsupplydepot'
 ACTION_BUILD_BARRACKS = 'buildbarracks'
 ACTION_BUILD_MARINE = 'buildmarine'
 ACTION_SCOUT = 'scout'
+ACTION_BUILD_ENGBAY = 'buildengineeringbay'
 ACTION_BUILD_TURRET = 'buildturret'
 
 
@@ -53,8 +57,9 @@ smart_actions = [
     ACTION_DO_NOTHING,
     ACTION_BUILD_SUPPLY_DEPOT,
     ACTION_BUILD_BARRACKS,
-    ACTION_BUILD_MARINE,
-    ACTION_BUILD_TURRET
+    ACTION_BUILD_ENGBAY,
+    ACTION_BUILD_TURRET,
+    ACTION_BUILD_MARINE
 ]
 #Split scout actions into 16 quadrants to minimize action space
 for mm_x in range(0, 64):
@@ -194,7 +199,10 @@ class SmartAgent(base_agent.BaseAgent):
         barracks_count = int(round(len(barracks_y) / 137))
 
         turrets_y, turrets_x = (unit_type == _TERRAN_TURRET).nonzero()
-        turrets_count = int(round(len(turrets_y)))
+        turrets_count = int(round(len(turrets_y) / 52 ))
+
+        engbay_y, engbay_x = (unit_type == _TERRAN_ENGBAY).nonzero()
+        engbay_count = 1 if engbay_y.any() else 0
 
         supply_limit = obs.observation['player'][4]
         army_supply = obs.observation['player'][8]
@@ -202,11 +210,13 @@ class SmartAgent(base_agent.BaseAgent):
         if self.stepNum == 0: #if this is the first step
             self.stepNum += 1
 
-            current_state = np.zeros(20) # Generate array of 21
+            current_state = np.zeros(23) # Generate array of 23
             current_state[0] = supply_depot_count
             current_state[1] = barracks_count
-            current_state[2] = supply_limit
-            current_state[3] = army_supply
+            current_state[2] = turrets_count
+            current_state[3] = engbay_count
+            current_state[4] = supply_limit
+            current_state[5] = army_supply
 
             enemy_squares = np.zeros(16)
             enemy_y, enemy_x = (obs.observation['minimap'][_PLAYER_RELATIVE_MINI] == _PLAYER_ENEMY).nonzero()
@@ -220,7 +230,7 @@ class SmartAgent(base_agent.BaseAgent):
                 enemy_squares =enemy_squares[::-1]
 
             for i in range(0,16):
-                current_state[i+4] = enemy_squares[i] #write in enemy squares location into the state
+                current_state[i+6] = enemy_squares[i] #write in enemy squares location into the state
 
             ################################################
 
@@ -231,7 +241,7 @@ class SmartAgent(base_agent.BaseAgent):
                 doReward = False
                 #Adjust reward based on current score
                 for i in range(0,16):
-                    if current_state[i+4] != self.previous_state[i+4]:
+                    if current_state[i+6] != self.previous_state[i+6]:
                         doReward = True
                         break
 
@@ -253,7 +263,7 @@ class SmartAgent(base_agent.BaseAgent):
 
             #select SCV for building
             ##added turret
-            if smart_action == ACTION_BUILD_BARRACKS or smart_action == ACTION_BUILD_SUPPLY_DEPOT or smart_action == ACTION_BUILD_TURRET:
+            if smart_action == ACTION_BUILD_BARRACKS or smart_action == ACTION_BUILD_SUPPLY_DEPOT or smart_action == ACTION_BUILD_TURRET or smart_action == ACTION_BUILD_ENGBAY:
                 unit_y, unit_x = (unit_type == _TERRAN_SCV).nonzero()
 
                 if unit_y.any():
@@ -296,6 +306,14 @@ class SmartAgent(base_agent.BaseAgent):
                         elif barracks_count == 1:
                             target = self.transformDistance(round(self.CommandCenterX.mean()), 15, round(self.CommandCenterY.mean()),12)
                         return actions.FunctionCall(_BUILD_BARRACKS, [_NOT_QUEUED, target])
+
+            elif smart_action == ACTION_BUILD_ENGBAY:
+                if  _BUILD_ENGBAY in obs.observation['available_actions']:
+                    if self.CommandCenterY.any():
+                        if engbay_count == 0:
+                            target = self.transformDistance(round(self.CommandCenterX.mean()), 35, round(self.CommandCenterY.mean()),0)
+                        return actions.FunctionCall(_BUILD_ENGBAY, [_NOT_QUEUED, target])
+
 
             elif smart_action == ACTION_BUILD_TURRET:
                 if turrets_count < 2 and _BUILD_TURRET in obs.observation['available_actions']:
