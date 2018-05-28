@@ -20,6 +20,7 @@ t.value = qt(1-0.05/2, sum(group.sample size) - length(group.sample size))
 ci.1 = c(1,0,0) 
 ci.2 = c(1,0,-1) 
 ci.3 = c(0,-1,1)
+#these ci.... should be able to be made for other parts of the code comparision as well.
 #add more here to do confidnence intervals. 
 #we could even check if the average of two bots for example one bot with no and one bot with full averaged, compared to medium ML bot
 
@@ -33,4 +34,4 @@ CI3 = confidenceInterval(group.means,group.sample size,ci.3,MSE,t.value)
 
 gammai = group.means - mean(group.means)
 #this part will let us calcualte all bots individuals gammas.
-#comeback here and store it as a matrix if error presents
+#comeback here and store it as a matrix if error presents################
