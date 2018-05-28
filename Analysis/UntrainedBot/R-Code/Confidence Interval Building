@@ -1,0 +1,36 @@
+confidenceInterval = function(mean,samplesize,gbi3,MSE,factor){
+  if(sum(gbi3) != 0 & sum(gbi3 !=0 ) != 1){ 
+    return("Error")
+  } else if(length(gbi3) != length(ni)){
+    return("Error")
+  }
+  #checking for error due to wrong inputs
+  else{
+    estimate = sum(mean*gbi3)
+    SE = sqrt(MSE*sum(gbi3^2/samplesize)) 
+    CI = estimate + c(-1,1) * factor * SE
+    result = c(estimate,CI)
+    ###### potential bug spot, produced correct results for fake dataset come back and test here
+    names(result) = c("Estimate","Lower Bound","Upper Bound")
+    return(result)
+  }
+}
+
+t.value = qt(1-0.05/2, sum(group.sample size) - length(group.sample size))
+ci.1 = c(1,0,0) 
+ci.2 = c(1,0,-1) 
+ci.3 = c(0,-1,1)
+#add more here to do confidnence intervals. 
+#we could even check if the average of two bots for example one bot with no and one bot with full averaged, compared to medium ML bot
+
+CI1 = confidenceInterval(group.means,group.sample size,ci.1,MSE,t.value)
+#these are the invidual runs we will run when all bots are complete and data is all good
+CI2 = confidenceInterval(group.means,group.sample size,ci.2,MSE,t.value)
+CI3 = confidenceInterval(group.means,group.sample size,ci.3,MSE,t.value)
+
+#we will use a minimum of three confidence intervals to compare all three of our bots. 
+#we may add in more confidence intervals later
+
+gammai = group.means - mean(group.means)
+#this part will let us calcualte all bots individuals gammas.
+#comeback here and store it as a matrix if error presents
