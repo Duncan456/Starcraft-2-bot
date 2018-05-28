@@ -3,6 +3,7 @@
 #when a specific alternative hypothesis (H1) is true. 
 #it is important for us to know how often we will make the correct decision when we reject our null hypothesis.
 #ie the bots are all the same.
+#probability of doing the correct thing
 
 
 findpower = function(mean1,samplesize,MSE,alpha){
