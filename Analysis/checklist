@@ -1,0 +1,35 @@
+matrixof = lm(numeric ~ groupname, data = the.dataset)
+anova(matrixof)
+
+#save anova(matrixof)
+table= anova(matrixof)
+
+SSTO = colSums(table)[2]
+
+
+#QQ plot for normaility (new.model is the model after removing outliers)
+#note we would calcualte the residuals in the beginning
+qqdiagram(model$residuals)
+qqlinefordiagram(model$residuals)
+
+
+ei = model$residuals
+#make sure things are all saved into model before starting this !!!!!!!!!!!!!!!!
+ShapiroWilks = shapiro.test(ei)
+ShaprioWilks
+#this will give us the values of the ShaprioWilks test
+
+#we will check for constant variance
+plot(model$fitted.values, model$residuals, main = "....",xlab = "Groups",ylab = "...) abline(h = 0,col = "blue" #we can change the color
+#the above line of code
+library(ggplot2)
+
+qplot(drug, ei, data = data) +  ggtitle("...") + xlab("Groups") + ylab("Errors projections") + geom_hline(yintercept = 0,col = "blue")
+
+
+#last thing to check if the Brown-Sythe fort and the code is below
+library(car)
+the.BFtest = leveneTest(....) #levenetest is from library(car)
+p.val = the.BFtest[[3]][1] #this is the only value we need from our matrix,
+#####check here for Bug!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+p.val
