@@ -1,0 +1,8 @@
+#In order to use the ANOVA, we must check to see if our sample size is efficent
+#this test assumes that we have already ran the power test. 
+
+totalmean = sum(gmeans*group.samplesize)/sum(group.samplesize)
+sizeofeffect = sqrt( sum( group.samplesize/sum(group.samplesize) *(gmeans -overall.mean)^2 )/MSE)
+pwr.anova.test(k = a, f = effect.size, sig.level = alpha, power = desired.power)
+
+#at the end of this we can check how many samples we needed in each group to run the analysis
