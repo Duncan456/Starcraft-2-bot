@@ -75,6 +75,7 @@ REWARDGL = 0
 
 DATA_FILE = 'Scout_data'
 
+
 # Stolen from https://github.com/MorvanZhou/Reinforcement-learning-with-tensorflow
 class QLearningTable:
     def __init__(self, actions, learning_rate=0.01, reward_decay=0.9, e_greedy=0.9):
@@ -119,12 +120,27 @@ class QLearningTable:
     def check_state_exist(self, state):
         if state not in self.q_table.index:
             # append new state to q table
-            self.q_table = self.q_table.append(pd.Series([0] *(len(self.actions)-1), index=self.q_table.columns, name=state))
+            self.q_table = self.q_table.append(pd.Series([0] *(len(self.actions)), index=self.q_table.columns, name=state))
 
 
 
 class SmartAgent(base_agent.BaseAgent):
     ## Allows us to invert the screen and minimap and pretend all actions are from top left
+    def __init__(self):
+        super(SmartAgent,self).__init__()
+        self.qlearn = QLearningTable(actions=list(range(len(smart_actions))))
+        self.previous_action = None
+        self.previous_state = None
+        self.previousSupply = 0
+
+        self.stepNum = 0
+        self.CommandCenterX = None
+        self.CommandCenterY = None
+        
+
+        if os.path.isfile(DATA_FILE + '.gz'):
+            self.qlearn.q_table = pd.read_pickle(DATA_FILE + '.gz', compression='gzip')
+
     def transformDistance(self, x, x_distance, y, y_distance):
         if not self.base_top_left:
             return [x - x_distance, y - y_distance]
@@ -145,21 +161,6 @@ class SmartAgent(base_agent.BaseAgent):
             smart_action, x, y = smart_action.split('_')
 
         return (smart_action, x, y)
-
-    def __init__(self):
-        super(SmartAgent,self).__init__()
-        self.qlearn = QLearningTable(actions=list(range(len(smart_actions))))
-        self.previous_action = None
-        self.previous_state = None
-        self.previousSupply = 0
-
-        self.stepNum = 0
-        self.CommandCenterX = None
-        self.CommandCenterY = None
-        
-
-        if os.path.isfile(DATA_FILE + '.gz'):
-            self.qlearn.q_table = pd.read_pickle(DATA_FILE + '.gz', compression='gzip')
 
     def step(self, obs):
         super(SmartAgent, self).step(obs)
@@ -201,6 +202,7 @@ class SmartAgent(base_agent.BaseAgent):
         turrets_count = int(round(len(turrets_y) / 52 ))
 
         engbay_y, engbay_x = (unit_type == _TERRAN_ENGBAY).nonzero()
+        print("engbay_y",engbay_y)
         engbay_count = 1 if engbay_y.any() else 0
 
         supply_limit = obs.observation['player'][4]
@@ -310,18 +312,18 @@ class SmartAgent(base_agent.BaseAgent):
             elif smart_action == ACTION_BUILD_ENGBAY:
                 if  _BUILD_ENGBAY in obs.observation['available_actions']:
                     if self.CommandCenterY.any():
-                        if engbay_count == 0:
-                            target = self.transformDistance(round(self.CommandCenterX.mean()), 20, round(self.CommandCenterY.mean()),0)
-                        return actions.FunctionCall(_BUILD_ENGBAY, [_NOT_QUEUED, target])
+                        if engbay_count < 1:
+                            target = self.transformDistance(round(self.CommandCenterX.mean()), 25, round(self.CommandCenterY.mean()),-2)
+                            return actions.FunctionCall(_BUILD_ENGBAY, [_NOT_QUEUED, target])
 
 
             elif smart_action == ACTION_BUILD_TURRET:
                 if turrets_count < 2 and _BUILD_TURRET in obs.observation['available_actions']:
                     if self.CommandCenterY.any():
                         if turrets_count == 0:
-                            target = self.transformDistance(round(self.CommandCenterX.mean()), 27, round(self.CommandCenterY.mean()),24)
+                            target = self.transformDistance(round(self.CommandCenterX.mean()), 29, round(self.CommandCenterY.mean()),24)
                         elif turrets_count == 1:
-                            target = self.transformDistance(round(self.CommandCenterX.mean()), 24, round(self.CommandCenterY.mean()),27)
+                            target = self.transformDistance(round(self.CommandCenterX.mean()), 24, round(self.CommandCenterY.mean()),29)
                         return actions.FunctionCall(_BUILD_TURRET,[_NOT_QUEUED,target])
 
             elif smart_action == ACTION_BUILD_MARINE:
