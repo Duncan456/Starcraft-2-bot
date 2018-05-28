@@ -7,13 +7,20 @@
 
 
 findpower = function(mean1,samplesize,MSE,alpha){
-  a = length(mean1) # Finds a
-  nt = sum(samplesize) #Finds the overall sample size
-  overall.mean = sum(samplesize*mean1)/nt # Finds the overall mean
-  phi = (1/sqrt(MSE))*sqrt( sum(samplesize*(mean1 - overall.mean)^2)/a) #Finds the books value of phi
-  phi.star = a *phi^2 #Finds the value of phi we will use for R 
-  Fc = qf(1-alpha,a-1,nt-a) #The critical value of F, use in R's function
-  power = 1 - pf(Fc, a-1, nt-a, phi.star)# The power, calculated using a non-central F
+  a = length(mean1) 
+  nt = sum(samplesize) 
+  overall.mean = sum(samplesize*mean1)/nt 
+  phi = (1/sqrt(MSE))*sqrt( sum(samplesize*(mean1 - overall.mean)^2)/a) 
+  phi.star = a *phi^2  
+  Fc = qf(1-alpha,a-1,nt-a) 
+  power = 1 - pf(Fc, a-1, nt-a, phi.star)
   return(power)
 }
+#finds the overall sample size
+#finds the overall mean
+#looks up the value of phi
+#Finds the critival value of F (using pwr and R's built in functionality).
+#calculates the power using the non-central F
 
+#note we used the package called pwr.
+this package gives funcationality to use qf and 
