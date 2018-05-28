@@ -1,0 +1,18 @@
+#why do we need to do power test?
+#The power of a hypothesis test is the probability that the test correctly rejects the null hypothesis (H0) 
+#when a specific alternative hypothesis (H1) is true. 
+#it is important for us to know how often we will make the correct decision when we reject our null hypothesis.
+#ie the bots are all the same.
+
+
+findpower = function(mean1,samplesize,MSE,alpha){
+  a = length(mean1) # Finds a
+  nt = sum(samplesize) #Finds the overall sample size
+  overall.mean = sum(samplesize*mean1)/nt # Finds the overall mean
+  phi = (1/sqrt(MSE))*sqrt( sum(samplesize*(mean1 - overall.mean)^2)/a) #Finds the books value of phi
+  phi.star = a *phi^2 #Finds the value of phi we will use for R 
+  Fc = qf(1-alpha,a-1,nt-a) #The critical value of F, use in R's function
+  power = 1 - pf(Fc, a-1, nt-a, phi.star)# The power, calculated using a non-central F
+  return(power)
+}
+
