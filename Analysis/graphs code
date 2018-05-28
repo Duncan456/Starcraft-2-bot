@@ -1,0 +1,21 @@
+
+meanOfGroup = by()  #insert the csv file here and add which things we want to look at
+plot(meanOfGroup,xaxt = ".... ",pch = 19,col = "...." ",xlab = "Experiment Group",ylab = "X",main = "y",type = "b") #adjust colors and such here
+axis(1,1:length(meanOfGroup),names(meanOfGroup))  #axsis function
+#this makes the line graph
+
+
+#forboxplot
+boxplot(#datasetname ~ #data.csv$name, main = "boxplot of bots ",ylab = "time to find")
+
+
+meanOfGroup =  by(...,mean)
+stdOfGroups = by(...,sd)
+samplesizeOfGroup = by(...,length)
+#insert the .csv file and the group name for all of the ...
+
+summaryofdata = rbind(meanOfGroup,stdOfGroups,samplesizeOfGroup)
+summaryofdata = round(summaryofdata,digits = 4)
+colnames(summaryofdata) = names(meanOfGroup)
+rownames(summaryofdata) = c("Means","Std. Dev","Sample Size")
+summaryofdata
