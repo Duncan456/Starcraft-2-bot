@@ -59,7 +59,7 @@ smart_actions = [
     ACTION_BUILD_BARRACKS,
     ACTION_BUILD_ENGBAY,
     ACTION_BUILD_TURRET,
-    ACTION_BUILD_MARINE
+    ACTION_BUILD_MARINE,
 ]
 #Split scout actions into 16 quadrants to minimize action space
 for mm_x in range(0, 64):
@@ -68,7 +68,7 @@ for mm_x in range(0, 64):
             smart_actions.append(ACTION_SCOUT + '_' + str(mm_x - 8) + '_' + str(mm_y - 8))
 
 
-SEE_ENEMY_REWARD = 0.1
+SEE_ENEMY_REWARD = 0.01
 NOT_DIE_REWARD = 0.5
 
 REWARDGL = 0
@@ -194,6 +194,7 @@ class SmartAgent(base_agent.BaseAgent):
 
         depot_y, depot_x = (unit_type == _TERRAN_SUPPLY_DEPOT).nonzero()
         supply_depot_count = int(round(len(depot_y) / 69))
+        #print("supplydepotcount",supply_depot_count)
 
         barracks_y, barracks_x = (unit_type == _TERRAN_BARRACKS).nonzero()
         barracks_count = int(round(len(barracks_y) / 137))
@@ -202,7 +203,7 @@ class SmartAgent(base_agent.BaseAgent):
         turrets_count = int(round(len(turrets_y) / 52 ))
 
         engbay_y, engbay_x = (unit_type == _TERRAN_ENGBAY).nonzero()
-        print("engbay_y",engbay_y)
+        #print("engbay_y",engbay_y)
         engbay_count = 1 if engbay_y.any() else 0
 
         supply_limit = obs.observation['player'][4]
@@ -233,24 +234,22 @@ class SmartAgent(base_agent.BaseAgent):
             for i in range(0,16):
                 current_state[i+6] = enemy_squares[i] #write in enemy squares location into the state
 
-            ################################################
-            ##print(current_state,"\n")
-
-
                 #Dont learn from the first step#
             if self.previous_action is not None:
                 #reward = 0
-                doReward = False
+                #doReward = False
                 #Adjust reward based on current score
-                for i in range(0,16):
-                    if current_state[i+6] != self.previous_state[i+6]:
-                        doReward = True
-                        break
+                #for i in range(0,16):
+                  #  if current_state[i+6] != self.previous_state[i+6]:
+                  #      doReward = True
+                 #       break
 
-                if doReward:
+               # if doReward:
                     #reward += SEE_ENEMY_REWARD
-                    REWARDGL+= SEE_ENEMY_REWARD
+                  #  REWARDGL+= SEE_ENEMY_REWARD
                     #print(reward)
+                REWARDGL += len(enemy_x)* SEE_ENEMY_REWARD
+
                 self.qlearn.learn(str(self.previous_state),self.previous_action,0,str(current_state))
 
 
@@ -296,7 +295,7 @@ class SmartAgent(base_agent.BaseAgent):
                         if supply_depot_count == 0:
                             target = self.transformDistance(round(self.CommandCenterX.mean()), -35, round(self.CommandCenterY.mean()), 0)
                         elif supply_depot_count == 1:
-                            target = self.transformDistance(round(self.CommandCenterX.mean()), -5, round(self.CommandCenterY.mean()), -10)
+                            target = self.transformDistance(round(self.CommandCenterX.mean()), -5, round(self.CommandCenterY.mean()), -32)
 
                         return actions.FunctionCall(_BUILD_SUPPLY_DEPOT, [_NOT_QUEUED, target])
 
