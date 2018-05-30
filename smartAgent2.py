@@ -59,7 +59,7 @@ smart_actions = [
     ACTION_BUILD_BARRACKS,
     ACTION_BUILD_ENGBAY,
     ACTION_BUILD_TURRET,
-    ACTION_BUILD_MARINE,
+    ACTION_BUILD_MARINE
 ]
 #Split scout actions into 16 quadrants to minimize action space
 for mm_x in range(0, 64):
@@ -68,8 +68,9 @@ for mm_x in range(0, 64):
             smart_actions.append(ACTION_SCOUT + '_' + str(mm_x - 8) + '_' + str(mm_y - 8))
 
 
-SEE_ENEMY_REWARD = 0.01
+SEE_ENEMY_REWARD = 0.001
 NOT_DIE_REWARD = 0.5
+
 
 REWARDGL = 0
 
@@ -248,7 +249,16 @@ class SmartAgent(base_agent.BaseAgent):
                     #reward += SEE_ENEMY_REWARD
                   #  REWARDGL+= SEE_ENEMY_REWARD
                     #print(reward)
-                REWARDGL += len(enemy_x)* SEE_ENEMY_REWARD
+                unit_y, unit_x = (unit_type == _TERRAN_COMMANDCENTER).nonzero()
+                if enemy_y.any() and unit_y.mean() > 0 and unit_y.mean()<1000:
+                    xdist = round((unit_x.mean() - enemy_x.mean())**2)
+                    ydist = round((unit_y.mean() - enemy_y.mean())**2)
+                    distance_multiplier = math.sqrt(xdist+ydist)
+                    print("distance mult", distance_multiplier)
+                else:
+                    distance_multiplier = 0
+                added_value = len(enemy_x)* SEE_ENEMY_REWARD*distance_multiplier
+                REWARDGL += added_value
 
                 self.qlearn.learn(str(self.previous_state),self.previous_action,0,str(current_state))
 
@@ -296,6 +306,7 @@ class SmartAgent(base_agent.BaseAgent):
                             target = self.transformDistance(round(self.CommandCenterX.mean()), -35, round(self.CommandCenterY.mean()), 0)
                         elif supply_depot_count == 1:
                             target = self.transformDistance(round(self.CommandCenterX.mean()), -5, round(self.CommandCenterY.mean()), -32)
+                            REWARDGL += 5
 
                         return actions.FunctionCall(_BUILD_SUPPLY_DEPOT, [_NOT_QUEUED, target])
 
@@ -306,6 +317,7 @@ class SmartAgent(base_agent.BaseAgent):
                             target = self.transformDistance(round(self.CommandCenterX.mean()), 15, round(self.CommandCenterY.mean()),-9)
                         elif barracks_count == 1:
                             target = self.transformDistance(round(self.CommandCenterX.mean()), 15, round(self.CommandCenterY.mean()),12)
+                            REWARDGL += 5
                         return actions.FunctionCall(_BUILD_BARRACKS, [_NOT_QUEUED, target])
 
             elif smart_action == ACTION_BUILD_ENGBAY:
@@ -313,6 +325,7 @@ class SmartAgent(base_agent.BaseAgent):
                     if self.CommandCenterY.any():
                         if engbay_count < 1:
                             target = self.transformDistance(round(self.CommandCenterX.mean()), 25, round(self.CommandCenterY.mean()),-2)
+                            REWARDGL += 5
                             return actions.FunctionCall(_BUILD_ENGBAY, [_NOT_QUEUED, target])
 
 
@@ -323,10 +336,12 @@ class SmartAgent(base_agent.BaseAgent):
                             target = self.transformDistance(round(self.CommandCenterX.mean()), 29, round(self.CommandCenterY.mean()),24)
                         elif turrets_count == 1:
                             target = self.transformDistance(round(self.CommandCenterX.mean()), 24, round(self.CommandCenterY.mean()),29)
+                            REWARDGL += 5
                         return actions.FunctionCall(_BUILD_TURRET,[_NOT_QUEUED,target])
 
             elif smart_action == ACTION_BUILD_MARINE:
                 if _TRAIN_MARINE in obs.observation['available_actions']:
+                    REWARDGL += 1
                     return actions.FunctionCall(_TRAIN_MARINE, [_QUEUED])
 
             elif smart_action == ACTION_SCOUT:
