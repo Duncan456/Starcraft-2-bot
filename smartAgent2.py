@@ -175,6 +175,8 @@ class SmartAgent(base_agent.BaseAgent):
             self.previous_action = None
             self.previous_state = None
             self.stepNum = 0
+            self.kill_check = 0
+            self.structure_kill = 0
             REWARDGL = 0
             return actions.FunctionCall(_NO_OP, [])
 
@@ -186,7 +188,8 @@ class SmartAgent(base_agent.BaseAgent):
             self.previous_action = None
             self.previous_state = None
             self.previousSupply = 0
-
+            self.structure_kill = 0
+            self.kill_check = 0
             self.stepNum = 0
             self.CommandCenterY, self.CommandCenterX = (unit_type == _TERRAN_COMMANDCENTER).nonzero()
 
@@ -209,6 +212,10 @@ class SmartAgent(base_agent.BaseAgent):
 
         supply_limit = obs.observation['player'][4]
         army_supply = obs.observation['player'][8]
+        # write something to return idle workers to mining
+        #idle_worker_count = obs.observation['player'][7] 
+        
+
 
         if self.stepNum == 0: #if this is the first step
             self.stepNum += 1
@@ -237,27 +244,29 @@ class SmartAgent(base_agent.BaseAgent):
 
                 #Dont learn from the first step#
             if self.previous_action is not None:
-                #reward = 0
-                #doReward = False
-                #Adjust reward based on current score
-                #for i in range(0,16):
-                  #  if current_state[i+6] != self.previous_state[i+6]:
-                  #      doReward = True
-                 #       break
-
-               # if doReward:
-                    #reward += SEE_ENEMY_REWARD
-                  #  REWARDGL+= SEE_ENEMY_REWARD
-                    #print(reward)
+  
                 unit_y, unit_x = (unit_type == _TERRAN_COMMANDCENTER).nonzero()
                 if enemy_y.any() and unit_y.mean() > 0 and unit_y.mean()<1000:
                     xdist = round((unit_x.mean() - enemy_x.mean())**2)
                     ydist = round((unit_y.mean() - enemy_y.mean())**2)
                     distance_multiplier = math.sqrt(xdist+ydist)
-                    print("distance mult", distance_multiplier)
+                    #print("distance mult", distance_multiplier)
                 else:
                     distance_multiplier = 0
-                added_value = len(enemy_x)* SEE_ENEMY_REWARD*distance_multiplier
+                
+                killed_units = obs.observation["score_cumulative"][5]
+                killed_structures = obs.observation["score_cumulative"][6]
+                killbonus = 0
+                structure_kill_bonus = 0
+                if self.kill_check < killed_units:
+                    killbonus = 1
+                    self.kill_check = killed_units
+                if self.structure_kill < killed_structures:
+                    structure_kill_bonus = 15
+                    self.structure_kill = killed_structures
+
+                added_value = len(enemy_x)* SEE_ENEMY_REWARD*distance_multiplier + structure_kill_bonus + killbonus
+                ## army_bonus = army_supply*0.01
                 REWARDGL += added_value
 
                 self.qlearn.learn(str(self.previous_state),self.previous_action,0,str(current_state))
