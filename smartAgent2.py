@@ -14,6 +14,7 @@ _SELECT_POINT = actions.FUNCTIONS.select_point.id
 _BUILD_SUPPLY_DEPOT = actions.FUNCTIONS.Build_SupplyDepot_screen.id
 _BUILD_BARRACKS = actions.FUNCTIONS.Build_Barracks_screen.id
 _TRAIN_MARINE = actions.FUNCTIONS.Train_Marine_quick.id
+_TRAIN_REAPER = actions.FUNCTIONS.Train_Reaper_quick.id
 _SELECT_ARMY = actions.FUNCTIONS.select_army.id
 _ATTACK_MINIMAP = actions.FUNCTIONS.Attack_minimap.id
 _MOVE_MINIMAP = actions.FUNCTIONS.Move_minimap.id
@@ -55,6 +56,7 @@ ACTION_DO_NOTHING = 'donothing'
 ACTION_BUILD_SUPPLY_DEPOT = 'buildsupplydepot'
 ACTION_BUILD_BARRACKS = 'buildbarracks'
 ACTION_BUILD_MARINE = 'buildmarine'
+ACTION_BUILD_REAPER = 'buildreaper'
 ACTION_SCOUT = 'scout'
 ACTION_BUILD_ENGBAY = 'buildengineeringbay'
 ACTION_BUILD_TURRET = 'buildturret'
@@ -70,7 +72,7 @@ smart_actions = [
     ACTION_BUILD_TURRET,
     ACTION_BUILD_REFINERY,
     ACTION_BUILD_TECHLAB,
-    ACTION_BUILD_MARINE
+    ACTION_BUILD_REAPER
 ]
 #Split scout actions into 16 quadrants to minimize action space
 for mm_x in range(0, 64):
@@ -317,12 +319,12 @@ class SmartAgent(base_agent.BaseAgent):
             #refinery = False
 
             excluded_actions = []
-            if supply_depot_count == 2 or worker_supply == 0:
+            if supply_depot_count == 3 or worker_supply == 0:
                 excluded_actions.append(1)
                 #supplydepots = True
 
                 
-            if supply_depot_count == 0 or barracks_count == 2 or worker_supply == 0:
+            if supply_depot_count == 0 or barracks_count == 3 or worker_supply == 0:
                 excluded_actions.append(2)
                 #barracks = True
             
@@ -362,7 +364,7 @@ class SmartAgent(base_agent.BaseAgent):
 
                     return actions.FunctionCall(_SELECT_POINT, [_NOT_QUEUED, target])
             # selecting barracks for making marine units
-            elif smart_action == ACTION_BUILD_MARINE or smart_action == ACTION_BUILD_TECHLAB:
+            elif smart_action == ACTION_BUILD_REAPER:
                 if barracks_y.any():
                     i = random.randint(0, len(barracks_y) - 1)
                     target = [barracks_x[i], barracks_y[i]]
@@ -385,6 +387,8 @@ class SmartAgent(base_agent.BaseAgent):
                             target = self.transformDistance(round(self.CommandCenterX.mean()), -35, round(self.CommandCenterY.mean()), 0)
                         elif supply_depot_count == 1:
                             target = self.transformDistance(round(self.CommandCenterX.mean()), -5, round(self.CommandCenterY.mean()), -32)
+                        elif supply_depot_count == 1:
+                            target = self.transformDistance(round(self.CommandCenterX.mean()), 10, round(self.CommandCenterY.mean()), 5)
                             REWARDGL += 5
 
                         return actions.FunctionCall(_BUILD_SUPPLY_DEPOT, [_NOT_QUEUED, target])
@@ -396,6 +400,8 @@ class SmartAgent(base_agent.BaseAgent):
                             target = self.transformDistance(round(self.CommandCenterX.mean()), 25, round(self.CommandCenterY.mean()),-9)
                         elif barracks_count == 1:
                             target = self.transformDistance(round(self.CommandCenterX.mean()), 25, round(self.CommandCenterY.mean()),13)
+                        elif barracks_count == 2:
+                            target = self.transformDistance(round(self.CommandCenterX.mean()), 20, round(self.CommandCenterY.mean()),11)
                             REWARDGL += 5
                         return actions.FunctionCall(_BUILD_BARRACKS, [_NOT_QUEUED, target])
 
@@ -432,15 +438,15 @@ class SmartAgent(base_agent.BaseAgent):
                             REWARDGL += 5
                         return actions.FunctionCall(_BUILD_TURRET,[_NOT_QUEUED,target])
 
-            elif smart_action == ACTION_BUILD_TECHLAB:
-                if _BUILD_TECHLAB in obs.observation['available_actions']:
-                    REWARDGL +=5
-                    return actions.FunctionCall(_BUILD_TECHLAB, [_QUEUED])
+            #elif smart_action == ACTION_BUILD_TECHLAB:
+             #   if _BUILD_TECHLAB in obs.observation['available_actions']:
+              #      REWARDGL +=5
+               #     return actions.FunctionCall(_BUILD_TECHLAB, [_QUEUED])
 
-            elif smart_action == ACTION_BUILD_MARINE:
-                if _TRAIN_MARINE in obs.observation['available_actions']:
+            elif smart_action == ACTION_BUILD_REAPER:
+                if _TRAIN_REAPER in obs.observation['available_actions']:
                     REWARDGL += 1
-                    return actions.FunctionCall(_TRAIN_MARINE, [_QUEUED])
+                    return actions.FunctionCall(_TRAIN_REAPER, [_QUEUED])
 
             elif smart_action == ACTION_SCOUT:
                 do_it = True
