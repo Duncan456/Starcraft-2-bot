@@ -19,6 +19,9 @@ _ATTACK_MINIMAP = actions.FUNCTIONS.Attack_minimap.id
 _MOVE_MINIMAP = actions.FUNCTIONS.Move_minimap.id
 _BUILD_ENGBAY = actions.FUNCTIONS.Build_EngineeringBay_screen.id
 _BUILD_TURRET = actions.FUNCTIONS.Build_MissileTurret_screen.id
+_HARVEST_GATHER = actions.FUNCTIONS.Harvest_Gather_screen.id
+_BUILD_REFINERY = actions.FUNCTIONS.Build_Refinery_screen.id
+_BUILD_TECHLAB = actions.FUNCTIONS.Build_TechLab_Barracks_quick.id
 
 _PLAYER_RELATIVE = features.SCREEN_FEATURES.player_relative.index
 _UNIT_TYPE = features.SCREEN_FEATURES.unit_type.index
@@ -37,6 +40,10 @@ _TERRAN_SUPPLY_DEPOT = 19
 _TERRAN_BARRACKS = 21
 _TERRAN_TURRET = 23
 _TERRAN_ENGBAY = 22
+_NEUTRAL_MINERAL_FIELD = 341
+_TERRAN_MARINE = 49
+_NEUTRAL_VESPENEGEYSER = 342
+_TERRAN_REFINERY = 20
 
 
 _NOT_QUEUED = [0]
@@ -51,6 +58,8 @@ ACTION_BUILD_MARINE = 'buildmarine'
 ACTION_SCOUT = 'scout'
 ACTION_BUILD_ENGBAY = 'buildengineeringbay'
 ACTION_BUILD_TURRET = 'buildturret'
+ACTION_BUILD_REFINERY = 'buildrefinery'
+ACTION_BUILD_TECHLAB = 'buildtechlab'
 
 
 smart_actions = [
@@ -59,6 +68,8 @@ smart_actions = [
     ACTION_BUILD_BARRACKS,
     ACTION_BUILD_ENGBAY,
     ACTION_BUILD_TURRET,
+    ACTION_BUILD_REFINERY,
+    ACTION_BUILD_TECHLAB,
     ACTION_BUILD_MARINE
 ]
 #Split scout actions into 16 quadrants to minimize action space
@@ -85,14 +96,19 @@ class QLearningTable:
         self.gamma = reward_decay
         self.epsilon = e_greedy
         self.q_table = pd.DataFrame(columns=self.actions, dtype=np.float64)
+        self.disallowed_actions = {}
 
-    def choose_action(self, observation):
+    def choose_action(self, observation, excluded_actions = []):
         self.check_state_exist(observation)
 
-        if np.random.uniform() < self.epsilon:
-            # choose best action
-            state_action = self.q_table.ix[observation, :]
+        self.disallowed_actions[observation] = excluded_actions
 
+        state_action = self.q_table.ix[observation, :]
+
+        for excluded_action in excluded_actions:
+            del state_action[excluded_action]
+
+        if np.random.uniform() < self.epsilon:
             # some actions have the same value
             state_action = state_action.reindex(np.random.permutation(state_action.index))
 
@@ -110,6 +126,13 @@ class QLearningTable:
         self.check_state_exist(s)
 
         q_predict = self.q_table.ix[s, a]
+
+        s_rewards = self.q_table.ix[s_, :]
+        
+        if s_ in self.disallowed_actions:
+            for excluded_action in self.disallowed_actions[s_]:
+                del s_rewards[excluded_action]
+        
         if s_ != 'terminal':
             q_target = r + self.gamma * self.q_table.ix[s_, :].max()
         else:
@@ -132,6 +155,7 @@ class SmartAgent(base_agent.BaseAgent):
         self.qlearn = QLearningTable(actions=list(range(len(smart_actions))))
         self.previous_action = None
         self.previous_state = None
+
         self.previousSupply = 0
 
         self.stepNum = 0
@@ -200,6 +224,9 @@ class SmartAgent(base_agent.BaseAgent):
         supply_depot_count = int(round(len(depot_y) / 69))
         #print("supplydepotcount",supply_depot_count)
 
+        cc_y, cc_x = (unit_type == _TERRAN_COMMANDCENTER).nonzero()
+        cc_count = 1 if cc_y.any() else 0
+
         barracks_y, barracks_x = (unit_type == _TERRAN_BARRACKS).nonzero()
         barracks_count = int(round(len(barracks_y) / 137))
 
@@ -210,8 +237,15 @@ class SmartAgent(base_agent.BaseAgent):
         #print("engbay_y",engbay_y)
         engbay_count = 1 if engbay_y.any() else 0
 
+        refinery_y, refinery_x = (unit_type == _TERRAN_REFINERY).nonzero()
+        refinery_count = int(round(len(refinery_y)/97))
+
+        supply_used = obs.observation['player'][3]
         supply_limit = obs.observation['player'][4]
-        army_supply = obs.observation['player'][8]
+        army_supply = obs.observation['player'][5] #check vs 8 #################
+        worker_supply = obs.observation['player'][6]
+
+        supply_free = supply_limit - supply_used
         # write something to return idle workers to mining
         #idle_worker_count = obs.observation['player'][7] 
         
@@ -220,13 +254,15 @@ class SmartAgent(base_agent.BaseAgent):
         if self.stepNum == 0: #if this is the first step
             self.stepNum += 1
 
-            current_state = np.zeros(22) # Generate array of 22
-            current_state[0] = supply_depot_count
-            current_state[1] = barracks_count
-            current_state[2] = turrets_count
+            current_state = np.zeros(24) # Generate array of 22
+            current_state[0] = cc_count
+            current_state[1] = supply_depot_count
+            current_state[2] = barracks_count
             current_state[3] = engbay_count
-            current_state[4] = supply_limit
-            current_state[5] = army_supply
+            current_state[4] = turrets_count
+            current_state[5] = refinery_count
+            current_state[6] = supply_limit
+            current_state[7] = army_supply
 
             enemy_squares = np.zeros(16)
             enemy_y, enemy_x = (obs.observation['minimap'][_PLAYER_RELATIVE_MINI] == _PLAYER_ENEMY).nonzero()
@@ -240,7 +276,7 @@ class SmartAgent(base_agent.BaseAgent):
                 enemy_squares =enemy_squares[::-1]
 
             for i in range(0,16):
-                current_state[i+6] = enemy_squares[i] #write in enemy squares location into the state
+                current_state[i+8] = enemy_squares[i] #write in enemy squares location into the state
 
                 #Dont learn from the first step#
             if self.previous_action is not None:
@@ -273,6 +309,40 @@ class SmartAgent(base_agent.BaseAgent):
 
 
                     #Choose an action#
+            # excluded actions start
+            #supplydepots = False
+            #barracks = False
+            #engbay = False
+            #turrets = False
+            #refinery = False
+
+            excluded_actions = []
+            if supply_depot_count == 2 or worker_supply == 0:
+                excluded_actions.append(1)
+                #supplydepots = True
+
+                
+            if supply_depot_count == 0 or barracks_count == 2 or worker_supply == 0:
+                excluded_actions.append(2)
+                #barracks = True
+            
+            if barracks_count == 0 or engbay_count == 1:
+                excluded_actions.append(3)
+                #engbay = True
+            
+            if engbay_count == 0 or turrets_count == 2:
+                excluded_actions.append(4)
+            
+            if turrets_count == 0 or refinery_count == 2:
+                excluded_actions.append(5)
+
+            if supply_free == 0 or barracks_count == 0 or refinery_count == 0:
+                excluded_actions.append(7)
+                
+            if army_supply == 0:
+                for i in range (0,16):
+                    excluded_actions.append(i+8)
+
             rl_action = self.qlearn.choose_action(str(current_state))
             self.previous_state = current_state
             self.previous_action = rl_action
@@ -283,7 +353,7 @@ class SmartAgent(base_agent.BaseAgent):
 
             #select SCV for building
             ##added turret
-            if smart_action == ACTION_BUILD_BARRACKS or smart_action == ACTION_BUILD_SUPPLY_DEPOT or smart_action == ACTION_BUILD_TURRET or smart_action == ACTION_BUILD_ENGBAY:
+            if smart_action == ACTION_BUILD_BARRACKS or smart_action == ACTION_BUILD_SUPPLY_DEPOT or smart_action == ACTION_BUILD_TURRET or smart_action == ACTION_BUILD_ENGBAY or smart_action== ACTION_BUILD_REFINERY:
                 unit_y, unit_x = (unit_type == _TERRAN_SCV).nonzero()
 
                 if unit_y.any():
@@ -292,7 +362,7 @@ class SmartAgent(base_agent.BaseAgent):
 
                     return actions.FunctionCall(_SELECT_POINT, [_NOT_QUEUED, target])
             # selecting barracks for making marine units
-            elif smart_action == ACTION_BUILD_MARINE:
+            elif smart_action == ACTION_BUILD_MARINE or smart_action == ACTION_BUILD_TECHLAB:
                 if barracks_y.any():
                     i = random.randint(0, len(barracks_y) - 1)
                     target = [barracks_x[i], barracks_y[i]]
@@ -305,7 +375,7 @@ class SmartAgent(base_agent.BaseAgent):
 
 
         elif self.stepNum == 1:
-            self.stepNum = 0
+            self.stepNum += 1
             smart_action,x,y = self.splitAction(self.previous_action) ##et the action
 
             if smart_action == ACTION_BUILD_SUPPLY_DEPOT:
@@ -323,30 +393,49 @@ class SmartAgent(base_agent.BaseAgent):
                 if barracks_count < 2 and _BUILD_BARRACKS in obs.observation['available_actions']:
                     if self.CommandCenterY.any():
                         if barracks_count == 0:
-                            target = self.transformDistance(round(self.CommandCenterX.mean()), 15, round(self.CommandCenterY.mean()),-9)
+                            target = self.transformDistance(round(self.CommandCenterX.mean()), 25, round(self.CommandCenterY.mean()),-9)
                         elif barracks_count == 1:
-                            target = self.transformDistance(round(self.CommandCenterX.mean()), 15, round(self.CommandCenterY.mean()),12)
+                            target = self.transformDistance(round(self.CommandCenterX.mean()), 25, round(self.CommandCenterY.mean()),13)
                             REWARDGL += 5
                         return actions.FunctionCall(_BUILD_BARRACKS, [_NOT_QUEUED, target])
 
             elif smart_action == ACTION_BUILD_ENGBAY:
-                if  _BUILD_ENGBAY in obs.observation['available_actions']:
+                if engbay_count < 1 and _BUILD_ENGBAY in obs.observation['available_actions']:
                     if self.CommandCenterY.any():
                         if engbay_count < 1:
-                            target = self.transformDistance(round(self.CommandCenterX.mean()), 25, round(self.CommandCenterY.mean()),-2)
+                            target = self.transformDistance(round(self.CommandCenterX.mean()), 0, round(self.CommandCenterY.mean()), 25)
                             REWARDGL += 5
                             return actions.FunctionCall(_BUILD_ENGBAY, [_NOT_QUEUED, target])
 
+            elif smart_action == ACTION_BUILD_REFINERY:
+                if refinery_count < 2 and _BUILD_REFINERY in obs.observation['available_actions']:
+                    if self.CommandCenterY.any():
+                        if refinery_count == 0:
+                            vespene_y, vespene_x = (unit_type == _NEUTRAL_VESPENEGEYSER).nonzero()
+                            first_y = vespene_y[0:97]
+                            first_x = vespene_x[0:97]
+                            target = self.transformDistance( round(first_x.mean()), 0 , round(first_y.mean())  , 0  )
+                        elif refinery_count == 1:
+                            vespene_y, vespene_x = (unit_type == _NEUTRAL_VESPENEGEYSER).nonzero()
+                            target = self.transformDistance(round(vespene_x.mean()),0 ,round(vespene_y.mean()), 0  )
+                            REWARDGL += 5
+                        return actions.FunctionCall(_BUILD_REFINERY,[_NOT_QUEUED,target])
+                            
 
             elif smart_action == ACTION_BUILD_TURRET:
                 if turrets_count < 2 and _BUILD_TURRET in obs.observation['available_actions']:
                     if self.CommandCenterY.any():
                         if turrets_count == 0:
-                            target = self.transformDistance(round(self.CommandCenterX.mean()), 29, round(self.CommandCenterY.mean()),24)
+                            target = self.transformDistance(round(self.CommandCenterX.mean()), 34, round(self.CommandCenterY.mean()),29)
                         elif turrets_count == 1:
-                            target = self.transformDistance(round(self.CommandCenterX.mean()), 24, round(self.CommandCenterY.mean()),29)
+                            target = self.transformDistance(round(self.CommandCenterX.mean()), 29, round(self.CommandCenterY.mean()),24)
                             REWARDGL += 5
                         return actions.FunctionCall(_BUILD_TURRET,[_NOT_QUEUED,target])
+
+            elif smart_action == ACTION_BUILD_TECHLAB:
+                if _BUILD_TECHLAB in obs.observation['available_actions']:
+                    REWARDGL +=5
+                    return actions.FunctionCall(_BUILD_TECHLAB, [_QUEUED])
 
             elif smart_action == ACTION_BUILD_MARINE:
                 if _TRAIN_MARINE in obs.observation['available_actions']:
@@ -366,5 +455,24 @@ class SmartAgent(base_agent.BaseAgent):
                     target = self.transformLocation((int(x)),int(y))
                     return actions.FunctionCall(_ATTACK_MINIMAP,[_NOT_QUEUED, target])
 
+
+        elif self.stepNum == 2:
+            self.stepNum = 0
+            
+            smart_action, x, y = self.splitAction(self.previous_action)
+                
+            if smart_action == ACTION_BUILD_BARRACKS or smart_action == ACTION_BUILD_SUPPLY_DEPOT:
+                if _HARVEST_GATHER in obs.observation['available_actions']:
+                    unit_y, unit_x = (unit_type == _NEUTRAL_MINERAL_FIELD).nonzero()
+                    
+                    if unit_y.any():
+                        i = random.randint(0, len(unit_y) - 1)
+                        
+                        m_x = unit_x[i]
+                        m_y = unit_y[i]
+                        
+                        target = [int(m_x), int(m_y)]
+                        
+                        return actions.FunctionCall(_HARVEST_GATHER, [_QUEUED, target])
 
         return actions.FunctionCall(_NO_OP, [])
