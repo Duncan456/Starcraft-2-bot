@@ -203,6 +203,7 @@ class SmartAgent(base_agent.BaseAgent):
             self.stepNum = 0
             self.kill_check = 0
             self.structure_kill = 0
+            self.geyser_farm = 0
             REWARDGL = 0
             return actions.FunctionCall(_NO_OP, [])
 
@@ -217,6 +218,7 @@ class SmartAgent(base_agent.BaseAgent):
             self.structure_kill = 0
             self.kill_check = 0
             self.stepNum = 0
+            self.geyser_farm = 0
             self.CommandCenterY, self.CommandCenterX = (unit_type == _TERRAN_COMMANDCENTER).nonzero()
 
 
@@ -381,35 +383,37 @@ class SmartAgent(base_agent.BaseAgent):
             smart_action,x,y = self.splitAction(self.previous_action) ##et the action
 
             if smart_action == ACTION_BUILD_SUPPLY_DEPOT:
-                if supply_depot_count < 2 and _BUILD_SUPPLY_DEPOT in obs.observation['available_actions']:
+                if supply_depot_count < 3 and _BUILD_SUPPLY_DEPOT in obs.observation['available_actions']:
                     if self.CommandCenterY.any():
                         if supply_depot_count == 0:
                             target = self.transformDistance(round(self.CommandCenterX.mean()), -35, round(self.CommandCenterY.mean()), 0)
                         elif supply_depot_count == 1:
                             target = self.transformDistance(round(self.CommandCenterX.mean()), -5, round(self.CommandCenterY.mean()), -32)
-                        elif supply_depot_count == 1:
-                            target = self.transformDistance(round(self.CommandCenterX.mean()), 10, round(self.CommandCenterY.mean()), 5)
+                        elif supply_depot_count == 2:
+                            target = self.transformDistance(round(self.CommandCenterX.mean()), 13, round(self.CommandCenterY.mean()), 0)
                             REWARDGL += 5
 
                         return actions.FunctionCall(_BUILD_SUPPLY_DEPOT, [_NOT_QUEUED, target])
 
             elif smart_action == ACTION_BUILD_BARRACKS:
-                if barracks_count < 2 and _BUILD_BARRACKS in obs.observation['available_actions']:
+                if barracks_count < 3 and _BUILD_BARRACKS in obs.observation['available_actions']:
                     if self.CommandCenterY.any():
                         if barracks_count == 0:
-                            target = self.transformDistance(round(self.CommandCenterX.mean()), 25, round(self.CommandCenterY.mean()),-9)
+                            target = self.transformDistance(round(self.CommandCenterX.mean()), 35, round(self.CommandCenterY.mean()),-20)
                         elif barracks_count == 1:
-                            target = self.transformDistance(round(self.CommandCenterX.mean()), 25, round(self.CommandCenterY.mean()),13)
+                            target = self.transformDistance(round(self.CommandCenterX.mean()), 25, round(self.CommandCenterY.mean()),-20)
                         elif barracks_count == 2:
-                            target = self.transformDistance(round(self.CommandCenterX.mean()), 20, round(self.CommandCenterY.mean()),11)
+                            target = self.transformDistance(round(self.CommandCenterX.mean()),28, round(self.CommandCenterY.mean()), 0)
                             REWARDGL += 5
+                            print("barracks 3 attempted\n")
+
                         return actions.FunctionCall(_BUILD_BARRACKS, [_NOT_QUEUED, target])
 
             elif smart_action == ACTION_BUILD_ENGBAY:
                 if engbay_count < 1 and _BUILD_ENGBAY in obs.observation['available_actions']:
                     if self.CommandCenterY.any():
                         if engbay_count < 1:
-                            target = self.transformDistance(round(self.CommandCenterX.mean()), 0, round(self.CommandCenterY.mean()), 25)
+                            target = self.transformDistance(round(self.CommandCenterX.mean()), -8, round(self.CommandCenterY.mean()), 28)
                             REWARDGL += 5
                             return actions.FunctionCall(_BUILD_ENGBAY, [_NOT_QUEUED, target])
 
@@ -432,9 +436,9 @@ class SmartAgent(base_agent.BaseAgent):
                 if turrets_count < 2 and _BUILD_TURRET in obs.observation['available_actions']:
                     if self.CommandCenterY.any():
                         if turrets_count == 0:
-                            target = self.transformDistance(round(self.CommandCenterX.mean()), 34, round(self.CommandCenterY.mean()),29)
-                        elif turrets_count == 1:
                             target = self.transformDistance(round(self.CommandCenterX.mean()), 29, round(self.CommandCenterY.mean()),24)
+                        elif turrets_count == 1:
+                            target = self.transformDistance(round(self.CommandCenterX.mean()), 24, round(self.CommandCenterY.mean()),29)
                             REWARDGL += 5
                         return actions.FunctionCall(_BUILD_TURRET,[_NOT_QUEUED,target])
 
@@ -467,18 +471,30 @@ class SmartAgent(base_agent.BaseAgent):
             
             smart_action, x, y = self.splitAction(self.previous_action)
                 
-            if smart_action == ACTION_BUILD_BARRACKS or smart_action == ACTION_BUILD_SUPPLY_DEPOT:
+            if smart_action == ACTION_BUILD_BARRACKS or smart_action == ACTION_BUILD_SUPPLY_DEPOT or smart_action == ACTION_BUILD_TURRET or smart_action == ACTION_BUILD_ENGBAY:
                 if _HARVEST_GATHER in obs.observation['available_actions']:
-                    unit_y, unit_x = (unit_type == _NEUTRAL_MINERAL_FIELD).nonzero()
-                    
-                    if unit_y.any():
-                        i = random.randint(0, len(unit_y) - 1)
-                        
-                        m_x = unit_x[i]
-                        m_y = unit_y[i]
-                        
-                        target = [int(m_x), int(m_y)]
-                        
-                        return actions.FunctionCall(_HARVEST_GATHER, [_QUEUED, target])
+                    self.geyser_farm += 1
+                    if self.geyser_farm % 4 == 0:
+                        unit_y, unit_x = (unit_type == _TERRAN_REFINERY).nonzero()
+                        if unit_y.any():
+                            i = random.randint(0, len(unit_y) - 1)
+                            
+                            m_x = unit_x[i]
+                            m_y = unit_y[i]
+                            
+                            target = [int(m_x), int(m_y)]
+                            
+                            return actions.FunctionCall(_HARVEST_GATHER, [_QUEUED, target])
+                    else:
+                        unit_y, unit_x = (unit_type == _NEUTRAL_MINERAL_FIELD).nonzero()
+                        if unit_y.any():
+                            i = random.randint(0, len(unit_y) - 1)
+                            
+                            m_x = unit_x[i]
+                            m_y = unit_y[i]
+                            
+                            target = [int(m_x), int(m_y)]
+                            
+                            return actions.FunctionCall(_HARVEST_GATHER, [_QUEUED, target])
 
         return actions.FunctionCall(_NO_OP, [])
