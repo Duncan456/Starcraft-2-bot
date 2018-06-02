@@ -326,7 +326,7 @@ class SmartAgent(base_agent.BaseAgent):
                 #supplydepots = True
 
                 
-            if supply_depot_count == 0 or barracks_count == 3 or worker_supply == 0:
+            if supply_depot_count == 0 or barracks_count == 4 or worker_supply == 0:
                 excluded_actions.append(2)
                 #barracks = True
             
@@ -396,16 +396,20 @@ class SmartAgent(base_agent.BaseAgent):
                         return actions.FunctionCall(_BUILD_SUPPLY_DEPOT, [_NOT_QUEUED, target])
 
             elif smart_action == ACTION_BUILD_BARRACKS:
-                if barracks_count < 3 and _BUILD_BARRACKS in obs.observation['available_actions']:
+                if barracks_count < 4 and _BUILD_BARRACKS in obs.observation['available_actions']:
                     if self.CommandCenterY.any():
                         if barracks_count == 0:
-                            target = self.transformDistance(round(self.CommandCenterX.mean()), 35, round(self.CommandCenterY.mean()),-20)
+                            target = self.transformDistance(round(self.CommandCenterX.mean()), 32, round(self.CommandCenterY.mean()),-20)
+                            REWARDGL += 2
                         elif barracks_count == 1:
-                            target = self.transformDistance(round(self.CommandCenterX.mean()), 25, round(self.CommandCenterY.mean()),-20)
+                            target = self.transformDistance(round(self.CommandCenterX.mean()), 22, round(self.CommandCenterY.mean()),-20)
+                            REWARDGL += 2
                         elif barracks_count == 2:
-                            target = self.transformDistance(round(self.CommandCenterX.mean()),28, round(self.CommandCenterY.mean()), 0)
-                            REWARDGL += 5
-                            print("barracks 3 attempted\n")
+                            target = self.transformDistance(round(self.CommandCenterX.mean()),28, round(self.CommandCenterY.mean()), -10)
+                            REWARDGL += 2
+                        elif barracks_count == 3:
+                            target = self.transformDistance(round(self.CommandCenterX.mean()),10, round(self.CommandCenterY.mean()), 17)
+                            REWARDGL += 4
 
                         return actions.FunctionCall(_BUILD_BARRACKS, [_NOT_QUEUED, target])
 
