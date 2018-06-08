@@ -1,0 +1,18 @@
+Week 5: I had to first learn python, play starcraft, and get familiar with the pysc2 api. This took about two full weeks.
+Most of the time was dedicated to learining python and getting familiar with the pysc2 api. Our team decided to go with python and
+I was the only one who didn't know it so I had to learn quickly.
+
+Week 6: More learning python, playing starcraft, and getting familiar with pysc2.
+
+Week 7: First implementation of the bot. Following the only pysc2 tutorial avaialable. Planned to branch out in our own direction once we learned more.
+We needed something working so the rest of our team could start their parts.
+
+Week 8: Started refining the bot and developing better scouting methods. Took a long time to figure out the best way to reward it for scouting. In retrospect 
+I would not choose QLearning again and would chose something more interesting like a genetic algorithm. My small knowledge of python and the non-existant pysc2
+documentation made this step harder than it needed to be.
+
+Week 9: Finalized the bot, finally got it to scout their base properly through an agressive scouting method of higher rewards the father away the enemies it sees are.
+
+Week 10: Refactored the code into functions to make it more readable.
+
+I worked together with Adam for most of the steps. 
