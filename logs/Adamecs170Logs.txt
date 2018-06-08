@@ -1,0 +1,111 @@
+﻿Adam Levin
+998408921
+Commit Log
+
+
+
+
+Commits on May 22, 2018
+
+
+initialization of scout bot
+ @alev30 
+
+alev30 committed 17 days ago
+
+
+* First creation of a bot that used a script with no ML for machine learning
+
+
+Add files via upload
+ @alev30 
+
+alev30 committed 17 days ago
+
+
+* Uploaded game replays
+
+
+
+
+
+
+Commits on May 26, 2018
+
+
+* added engineering bay and turrets …
+*  @alev30 * alev30 committed 13 days ago
+* Verified 
+* 3396855
+*  
+* Add files via upload …
+*  @alev30 * alev30 committed 13 days ago
+
+
+Commits on May 27, 2018
+   * Add files via upload
+   *  @alev30    * works about half the time to set up engineering bay and turrets
+   *    * alev30 committed 12 days ago
+   * Verified 
+   * 08ead53
+   *  
+   * fully functional bot - scouting, missle turrets, …
+   *  @alev30    * alev30 committed 12 days ago
+   * Verified 
+   * E694170
+bot uses qlearning to implement scouting via marine production from barracks, builds supply depots, builds engineering bay and missle turrets for defense.
+
+
+
+      *  
+      * Add files via upload …
+      *  @alev30       * alev30 committed 12 days ago
+
+
+
+
+
+
+Commits on May 28, 2018
+         * scouts opponents base …
+         *  @alev30          * alev30 committed 11 days ago
+         * smart agent scouts opponents base really well, including learning table
+Commits on May 29, 2018
+            * more replays
+            *  @alev30             * alev30 committed 10 days ago
+
+
+
+
+Commits on May 30, 2018
+               * added a killbonus
+               *  @alev30                * alev30 committed 9 days ago
+               * Verified 
+               * 41fd8de
+               *  
+               * IT WINS AND SCOUTS
+               *  @alev30                * alev30 committed 9 days ago
+
+
+
+
+Commits on May 31, 2018
+                  * reaper scout finds base quickly
+                  *  @alev30                   * alev30 committed 8 days ago
+                  * Verified 
+                  * 5fe6e96
+                  *  
+                  * added excluded actions, refineries, and techlabs for reapers
+                  *  @alev30                   * alev30 committed 8 days ago
+
+
+
+
+Commits on Jun 1, 2018
+                     * finds base quickly, forces surrenders
+                     *  @alev30                      * alev30 committed 7 days ago
+                     * Verified 
+                     * b79f966
+                     *  
+                     * quick edits to unit placement, still finds base quickly …
+                     *  @alev30                      * alev30 committed 7 days ago
