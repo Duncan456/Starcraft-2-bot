@@ -1,0 +1,16 @@
+Traceback (most recent call last):
+  File "sc2reader_test.py", line 24, in <module>
+    main()
+  File "sc2reader_test.py", line 16, in main
+    replay = sc2reader.load_replay('not_working.SC2Replay', load_level=4)
+  File "/Users/charlesarellano/Desktop/github/src/sc2reader/sc2reader/factories/sc2factory.py", line 85, in load_replay
+    return self.load(Replay, source, options, **new_options)
+  File "/Users/charlesarellano/Desktop/github/src/sc2reader/sc2reader/factories/sc2factory.py", line 137, in load
+    return self._load(cls, resource, filename=filename, options=options)
+  File "/Users/charlesarellano/Desktop/github/src/sc2reader/sc2reader/factories/sc2factory.py", line 146, in _load
+    obj = cls(resource, filename=filename, factory=self, **options)
+  File "/Users/charlesarellano/Desktop/github/src/sc2reader/sc2reader/resources.py", line 275, in __init__
+    self.load_details()
+  File "/Users/charlesarellano/Desktop/github/src/sc2reader/sc2reader/resources.py", line 345, in load_details
+    self.region = details['cache_handles'][0].server.lower()
+IndexError: list index out of range
